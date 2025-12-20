@@ -1,4 +1,4 @@
 torchaudio
 speechbrain~=1.0.0
-ovos-plugin-manager~=0.0, >=0.0.26a15
+ovos-plugin-manager~=2.1, >=2.1
 ovos-config>=0.0.12
