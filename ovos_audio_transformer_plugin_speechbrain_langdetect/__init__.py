@@ -1,14 +1,34 @@
 import numpy as np
 import torch
+import torchaudio
+
+# HACK: see https://github.com/speechbrain/speechbrain/issues/3012
+if not hasattr(torchaudio, "list_audio_backends"):
+    torchaudio.list_audio_backends = lambda: [""]  # type: ignore
+
 from ovos_config.locale import get_valid_languages
 from ovos_plugin_manager.templates.transformers import AudioLanguageDetector
+from ovos_plugin_manager.utils.audio import AudioData, AudioFile
 from ovos_utils.xdg_utils import xdg_data_home
-from speech_recognition import AudioData
 from speechbrain.inference import EncoderClassifier
 
 
 class SpeechBrainLangClassifier(AudioLanguageDetector):
     def __init__(self, config=None):
+        """
+        Initialize the SpeechBrain language classifier plugin instance.
+        
+        Parameters:
+            config (dict, optional): Configuration dictionary. Recognized keys:
+                - "model" (str): SpeechBrain model identifier or path to use (defaults to
+                  "speechbrain/lang-id-commonlanguage_ecapa").
+                - "use_cuda" (bool): If true, attempt to load the model onto CUDA; otherwise
+                  load on the default device.
+        
+        Side effects:
+            Sets up the plugin via the superclass and initializes `self.engine` with a
+            SpeechBrain EncoderClassifier instance.
+        """
         config = config or {}
         super().__init__("ovos-audio-transformer-plugin-speechbrain-langdetect", 10, config)
         model = self.config.get("model") or "speechbrain/lang-id-commonlanguage_ecapa"
@@ -18,18 +38,18 @@ class SpeechBrainLangClassifier(AudioLanguageDetector):
         else:
             self.engine = EncoderClassifier.from_hparams(source=model, savedir=f"{xdg_data_home()}/speechbrain")
 
-    @staticmethod
-    def audiochunk2array(audio_data):
-        # Convert buffer to float32 using NumPy
-        audio_as_np_int16 = np.frombuffer(audio_data, dtype=np.int16)
-        audio_as_np_float32 = audio_as_np_int16.astype(np.float32)
-
-        # Normalise float32 array so that values are between -1.0 and +1.0
-        max_int16 = 2 ** 15
-        data = audio_as_np_float32 / max_int16
-        return torch.from_numpy(data).float()
-
     def signal2probs(self, signal):
+        """
+        Map a model input signal to language probability scores.
+        
+        Runs the classifier on the provided preprocessed audio signal and returns a mapping from lowercase language codes to their predicted probabilities.
+        
+        Parameters:
+            signal: Model-ready audio input (batch tensor or structure accepted by the classifier's classify_batch).
+        
+        Returns:
+            dict: Mapping where each key is a lowercase BCP-47-like language code (e.g., "en-us") and each value is the language probability as a float between 0 and 1.
+        """
         probs, _, _, _ = self.engine.classify_batch(signal)
         probs = torch.softmax(probs[0], dim=0)
         labels = self.engine.hparams.label_encoder.decode_ndim(range(len(probs)))
@@ -88,11 +108,20 @@ class SpeechBrainLangClassifier(AudioLanguageDetector):
 
     # plugin api
     def detect(self, audio_data: bytes, valid_langs=None):
-        if isinstance(audio_data, AudioData):
-            audio_data = audio_data.get_wav_data()
+        """
+        Detects the most likely language for the given audio and returns the language code with its probability.
+        
+        Parameters:
+            audio_data (bytes | AudioData): Raw audio bytes or an AudioData instance; raw bytes will be wrapped into an AudioData with 16 kHz sample rate and 2 channels.
+            valid_langs (Iterable[str], optional): Iterable of allowed BCP-47-like language codes to consider (e.g., "en-US", "es-ES"); if omitted the global get_valid_languages() set is used.
+        
+        Returns:
+            tuple: If only one language is in `valid_langs`, returns (audio_data, {}) indicating no classification was performed. Otherwise returns `(lang_code, probability)` where `lang_code` is the selected language code (string) and `probability` is the normalized confidence as a float between 0 and 1.
+        """
+        if not isinstance(audio_data, AudioData):
+            audio_data = AudioData(audio_data, 16000, 2)
 
-        signal = self.audiochunk2array(audio_data)
-
+        signal = torch.from_numpy(audio_data.get_np_float32()).float()
         valid = valid_langs or get_valid_languages()
         if len(valid) == 1:
             # no classification needed
@@ -110,11 +139,9 @@ class SpeechBrainLangClassifier(AudioLanguageDetector):
 
 
 if __name__ == "__main__":
-    from speech_recognition import Recognizer, AudioFile
-
     jfk = "/home/miro/PycharmProjects/ovos-stt-plugin-fasterwhisper/jfk.wav"
     with AudioFile(jfk) as source:
-        audio = Recognizer().record(source)
+        audio = source.read()
 
     s = SpeechBrainLangClassifier()
     lang, prob = s.detect(audio.get_wav_data(), valid_langs=["en-us", "es-es"])
