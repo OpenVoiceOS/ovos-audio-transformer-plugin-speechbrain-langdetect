@@ -1,9 +1,15 @@
 import numpy as np
 import torch
+import torchaudio
+
+# HACK: see https://github.com/speechbrain/speechbrain/issues/3012
+if not hasattr(torchaudio, "list_audio_backends"):
+    torchaudio.list_audio_backends = lambda: [""]  # type: ignore
+
 from ovos_config.locale import get_valid_languages
 from ovos_plugin_manager.templates.transformers import AudioLanguageDetector
+from ovos_plugin_manager.utils.audio import AudioData, AudioFile
 from ovos_utils.xdg_utils import xdg_data_home
-from speech_recognition import AudioData
 from speechbrain.inference import EncoderClassifier
 
 
@@ -17,17 +23,6 @@ class SpeechBrainLangClassifier(AudioLanguageDetector):
                                                          run_opts={"device": "cuda"})
         else:
             self.engine = EncoderClassifier.from_hparams(source=model, savedir=f"{xdg_data_home()}/speechbrain")
-
-    @staticmethod
-    def audiochunk2array(audio_data):
-        # Convert buffer to float32 using NumPy
-        audio_as_np_int16 = np.frombuffer(audio_data, dtype=np.int16)
-        audio_as_np_float32 = audio_as_np_int16.astype(np.float32)
-
-        # Normalise float32 array so that values are between -1.0 and +1.0
-        max_int16 = 2 ** 15
-        data = audio_as_np_float32 / max_int16
-        return torch.from_numpy(data).float()
 
     def signal2probs(self, signal):
         probs, _, _, _ = self.engine.classify_batch(signal)
@@ -88,11 +83,10 @@ class SpeechBrainLangClassifier(AudioLanguageDetector):
 
     # plugin api
     def detect(self, audio_data: bytes, valid_langs=None):
-        if isinstance(audio_data, AudioData):
-            audio_data = audio_data.get_wav_data()
+        if not isinstance(audio_data, AudioData):
+            audio_data = AudioData(audio_data, 16000, 2)
 
-        signal = self.audiochunk2array(audio_data)
-
+        signal = torch.from_numpy(audio_data.get_np_float32()).float()
         valid = valid_langs or get_valid_languages()
         if len(valid) == 1:
             # no classification needed
@@ -110,11 +104,9 @@ class SpeechBrainLangClassifier(AudioLanguageDetector):
 
 
 if __name__ == "__main__":
-    from speech_recognition import Recognizer, AudioFile
-
     jfk = "/home/miro/PycharmProjects/ovos-stt-plugin-fasterwhisper/jfk.wav"
     with AudioFile(jfk) as source:
-        audio = Recognizer().record(source)
+        audio = source.read()
 
     s = SpeechBrainLangClassifier()
     lang, prob = s.detect(audio.get_wav_data(), valid_langs=["en-us", "es-es"])
