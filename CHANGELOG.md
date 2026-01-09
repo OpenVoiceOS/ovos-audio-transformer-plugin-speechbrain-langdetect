@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.0a13](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/tree/0.0.0a13) (2026-01-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/compare/0.0.0a11...0.0.0a13)
+
+**Merged pull requests:**
+
+- Update actions/setup-python action to v6 [\#20](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/pull/20) ([renovate[bot]](https://github.com/apps/renovate))
+- Update actions/checkout action to v6 [\#11](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/pull/11) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [0.0.0a11](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/tree/0.0.0a11) (2026-01-09)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/compare/V0.0.0a10...0.0.0a11)
