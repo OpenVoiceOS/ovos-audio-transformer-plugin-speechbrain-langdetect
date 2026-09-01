@@ -10,9 +10,11 @@ jobs:
     uses: OpenVoiceOS/gh-automations/.github/workflows/license-check.yml@dev
     secrets: inherit
     with:
-      # Transitive torch dependencies with unparseable license metadata, tagged
+      # Transitive dependencies with unparseable license metadata, tagged
       # Other/Error by pilosus — all permissive false positives:
       #   nvidia-*/cuda-* : proprietary but redistributable CUDA runtime wheels
       #   sentencepiece   : Apache-2.0 (Google), ships empty license metadata
+      #   fsspec          : BSD-3-Clause, declared via PEP 639 License-Expression
+      #                     field which pilosus's checker can't parse yet
       exclude_packages: >-
-        (?i:^nvidia-[a-z0-9-]*([=<>!~ @;].*)?$)|(?i:^cuda-[a-z0-9-]*([=<>!~ @;].*)?$)|(?i:^sentencepiece([=<>!~ @;].*)?$)
+        (?i:^nvidia-[a-z0-9-]*([=<>!~ @;].*)?$)|(?i:^cuda-[a-z0-9-]*([=<>!~ @;].*)?$)|(?i:^sentencepiece([=<>!~ @;].*)?$)|(?i:^fsspec([=<>!~ @;].*)?$)
