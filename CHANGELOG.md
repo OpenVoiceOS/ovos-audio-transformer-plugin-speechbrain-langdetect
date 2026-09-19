@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a1](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/tree/0.0.3a1) (2026-09-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/compare/0.0.2a2...0.0.3a1)
+
+**Merged pull requests:**
+
+- fix\(deps\): huggingface\_hub floor with a ceiling under 1.0 [\#28](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/pull/28) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [0.0.2a2](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/tree/0.0.2a2) (2026-09-01)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-audio-transformer-plugin-speechbrain-langdetect/compare/0.0.2a1...0.0.2a2)
